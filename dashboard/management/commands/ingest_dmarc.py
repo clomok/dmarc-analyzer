@@ -113,15 +113,15 @@ class Command(BaseCommand):
                         begin_ts = float(metadata.get("begin", 0))
                         end_ts = float(metadata.get("end", 0))
 
-                    date_begin = make_aware(datetime.fromtimestamp(begin_ts))
-                    date_end = make_aware(datetime.fromtimestamp(end_ts))
+                    date_begin = datetime.fromtimestamp(begin_ts, tz=timezone.utc)
+                    date_end = datetime.fromtimestamp(end_ts, tz=timezone.utc)
                 
                 except StopIteration:
                     pass 
                 except (ValueError, TypeError):
-                    date_begin = make_aware(datetime.now())
-                    date_end = make_aware(datetime.now())
-
+                    # Fallback to current time (UTC)
+                    date_begin = datetime.now(timezone.utc)
+                    date_end = datetime.now(timezone.utc)
                 # Extract DKIM domains
                 dkim_domains = [
                     d["domain"] for d in auth_results.get("dkim", []) if "domain" in d
