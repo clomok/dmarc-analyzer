@@ -2,82 +2,76 @@
 
 # Project: Self-Hosted DMARC Analyzer
 
-## 1\. Context & Architecture
+## 1. Context & Architecture
 
-Goal: A personal, self-hosted tool to receive, parse, store, and visualize DMARC reports from multiple domains.
+**Goal:** A personal, self-hosted tool to receive, parse, store, and visualize DMARC reports from multiple domains.
 
-Deployment: Single-user (Admin), Multi-tenant data structure (Grouped by Domain/Organization).
+**Deployment:** Single-user (Admin), Multi-tenant data structure (Grouped by Domain/Organization).
 
-Infrastructure: Docker Compose (Local Homelab).
+**Infrastructure:** Docker Compose (Local Homelab).
 
 ### The Stack
 
 - **Backend:** Django 5.x (Python 3.11)
-- **Database:** PostgreSQL 14 + **TimescaleDB** (for time-series report data)
-- **Ingress:** Custom Django Management Command using `parsedmarc` library (IMAP fetch).
-- **Frontend:** Django Templates + **HTMX** + **Tailwind CSS** (CDN) + **Apache ECharts**.
-- **Authentication:** `django-allauth` (Installed but not yet fully configured for UI).
+- **Database:** PostgreSQL 14 + **TimescaleDB** (Hypertable for time-series data)
+- **Ingress:** Custom Django Management Command using `parsedmarc` (IMAP fetch).
+- **Frontend:** Django Templates + **HTMX** (Interactivity) + **Tailwind CSS** (CDN) + **Apache ECharts**.
+- **Authentication:** Postponed (Will rely on external Authentik proxy eventually).
 
-## 2\. Current Status (As of Last Session)
+## 2. Current Status
 
 - **Infrastructure:**
-  - Docker Compose handles `web` and `db` services.
-  - Environment variables moved to `.env` file (gitignored).
-  - `docker-compose.yaml` uses `DATABASE_URL` injection.
-  - `settings.py` uses `dj-database-url` to parse db connections.
+  - `docker-compose.yaml` handles `web` and `db`.
+  - **Security Fix:** CSRF tokens are now injected into `base.html` (`hx-headers`) to allow HTMX POST requests.
 - **Database:**
-  - `DmarcReport` table is a **TimescaleDB Hypertable**.
-  - **Schema Update:** Added `report_id` field to `DmarcReport` model to support deduplication.
-- **Ingress (**`ingest_dmarc.py`**):**
-  - Connects to IMAP via `parsedmarc`.
-  - **Deduplication:** Now checks `report_id` against the DB before inserting to prevent duplicate rows.
-  - Successfully parses XML, handles nested/flat structures, and robust date parsing.
-- **Frontend (Implemented):**
-  - **Base Template:** Includes Tailwind (Dark Mode default), HTMX, and ECharts.
-  - **Dashboard View:**
-    - Aggregate Stats Cards (Total, Compliance %, SPF/DKIM Alignment).
-    - **Multi-Series Line Chart:** Visualizes volume per domain over time.
-    - **Granularity Toggle:** Switch chart between Day/Week/Month.
-    - **Domain Table:** Lists domains with summary stats.
-  - **Domain Detail View:**
-    - Lists individual report rows for a specific domain.
-    - Shows Source IP, Country, Count, Disposition, and Alignment status.
+  - `DmarcReport`: TimescaleDB Hypertable.
+  - **Fields:** Added `report_id` (deduplication) and `is_acknowledged` (boolean for manual workflow).
+  - **Logic:** `DmarcReport` model includes an `inspection_data` property that generates "Layman Summaries" and standardized "Threat Levels" (Red/Yellow/Green) on the fly.
+- **Ingress:**
+  - Deduplication logic active (checks `report_id`).
+  - **Manual Trigger:** "Check for Updates" button on Dashboard triggers `ingest_dmarc` via HTMX.
+- **Frontend (Dashboard):**
+  - **Stats Cards:** Added "Active Threats" card (Counts unacknowledged IPs failing SPF & DKIM).
+  - **Charts:** Multi-series line chart for domain volume.
+- **Frontend (Domain Detail):**
+  - **Visuals:** Rows failing both SPF & DKIM are highlighted Red.
+  - **Interaction:** **Accordion Style** expansion for rows.
+  - **Drill Down:** Clicking a row reveals:
+    - **Analysis:** Human-readable summary of _why_ it failed.
+    - **Tags:** Technical breakdown of SPF/DKIM results.
+    - **Raw Data:** Hidden JSON fields (`auth_results`, `envelope_from`) for debugging.
+  - **Workflow:** "Mark as Reviewed" checkbox (HTMX) allows users to dismiss threats from the main dashboard counter.
 
-## 3\. Operational Commands (PowerShell)
+## 3. Operational Commands (PowerShell)
 
 - **Start Dev Server:** `.\manage.ps1 dev`
-- **Run Ingest (Fetch Emails):** `.\manage.ps1 ingest`
-- **Reset DB (Nuclear):** `.\manage.ps1 reset`
-- **Manual Migrations (if models change):**
-  ```
+- **Run Ingest (Manual):** `.\manage.ps1 ingest` (Or use the GUI button)
+- **Reset DB:** `.\manage.ps1 reset`
+- **Migrations:**
+  ```powershell
   docker-compose exec web python manage.py makemigrations
   docker-compose exec web python manage.py migrate
   ```
 
-## 4\. Database Schema Reference
+## 4\. Development Philosophy (CRITICAL)
 
-- **Organization:** Grouping entity.
-- **DomainEntity:** Represents a domain (e.g., `google.com`).
-- **DmarcReport:**
-  - **Type:** Hypertable (partitioned by `date_begin`).
-  - **Deduplication Key:** `report_id`.
-  - **Key Data:** `source_ip`, `count`, `disposition`, `dkim_aligned`, `spf_aligned`.
-  - **JSONB Fields:** `auth_results`, `dkim_domains`.
+1.  **Simplicity First:** Always prioritize the simplest, most durable solution (e.g., standard Checkbox vs. dynamic state-swapping buttons).
+2.  **Consent for Complexity:** If a feature requires complex logic (e.g., websockets, celery tasks, heavy JS), **explain WHY** it is needed and get approval before generating code.
+3.  **Visual Clarity:** UI should cleanly separate "Technical Details" (for debugging) from "Layman Summaries" (for quick decision making).
 
-## 5\. Next Session Goals
+## 5\. Next Steps / Roadmap
 
-1.  **Row Expansion (Drill Down):**
-    - In the `Domain Detail` view, make table rows clickable.
-    - Reveal hidden JSON data: `auth_results` (why it failed), `envelope_from`, and `dkim_domains`.
-2.  **Authentication UI:**
-    - Create Login/Logout templates.
-    - Protect views with `@login_required`.
-3.  **Refinement:**
-    - Add "Last Seen" dates to the Domain list.
-    - specific highlighting for "Threats" (IPs that fail both SPF and DKIM).
+1.  **Refinement:**
+    - Add "Last Seen" dates to the main Domain list.
+    - Polish mobile view for tables.
+2.  **Authentication:**
+    - _Status: Low Priority / On Hold._ (Will likely use basic Django LoginView later).
+3.  **Automations (Future):**
+    - Filters to auto-ignore known safe IPs.
 
-## 6\. Critical Constraints & Rules
+## 6\. Constraints & Rules
 
-- **JSON Serialization:** When passing data to ECharts in templates, ALWAYS use `json.dumps()` in the view and `{{ variable|safe }}` in the template to prevent JavaScript syntax errors.
-- **TimescaleDB:** Always ensure migrations respect the Hypertable structure (composite primary keys involving time).
-- **Environment:** maintain `.env` file usage for secrets; do not hardcode credentials in `docker-compose.yaml`.
+- **JSON Serialization:** Use `json.dumps()` in views and `{{ variable|safe }}` in templates for ECharts.
+- **HTMX:** Always ensure `hx-headers` include the CSRF token for POST requests.
+- **TimescaleDB:** Migrations must respect the Hypertable structure (composite primary keys).
+- **Environment:** Keep secrets in `.env`; do not hardcode in `docker-compose.yaml`.
