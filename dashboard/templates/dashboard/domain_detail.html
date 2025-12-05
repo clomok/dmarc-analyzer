@@ -30,12 +30,20 @@
                         <th class="px-6 py-4">Disposition</th>
                         <th class="px-6 py-4 text-center">SPF</th>
                         <th class="px-6 py-4 text-center">DKIM</th>
-                    </tr>
+                        <th class="px-6 py-4 w-10"></th> </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     {% for report in reports %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                        <td class="px-6 py-4 text-gray-500 dark:text-gray-400">
+                    <tr onclick="toggleRow('details-{{ report.id }}')" class="cursor-pointer transition border-l-4 
+                        {% if report.inspection_data.threat %}
+                            bg-red-50 dark:bg-red-900/20 border-red-500 hover:bg-red-100 dark:hover:bg-red-900/30
+                        {% elif report.spf_aligned and report.dkim_aligned %}
+                            border-transparent hover:bg-gray-50 dark:hover:bg-gray-700/50
+                        {% else %}
+                            bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-900/30
+                        {% endif %}
+                    ">
+                        <td class="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">
                             {{ report.date_begin|date:"M d, H:i" }}
                         </td>
                         <td class="px-6 py-4 font-mono text-xs">
@@ -61,22 +69,102 @@
                         </td>
                         <td class="px-6 py-4 text-center">
                             {% if report.spf_aligned %}
-                                <span class="text-green-500">✔</span>
+                                <span class="text-green-500 font-bold">✔</span>
                             {% else %}
-                                <span class="text-red-500">✘</span>
+                                <span class="text-red-500 font-bold">✘</span>
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 text-center">
                             {% if report.dkim_aligned %}
-                                <span class="text-green-500">✔</span>
+                                <span class="text-green-500 font-bold">✔</span>
                             {% else %}
-                                <span class="text-red-500">✘</span>
+                                <span class="text-red-500 font-bold">✘</span>
                             {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-gray-400 text-center">
+                            <span id="icon-details-{{ report.id }}">▼</span>
+                        </td>
+                    </tr>
+
+                    <tr id="details-{{ report.id }}" class="hidden bg-gray-50 dark:bg-gray-800/50">
+                        <td colspan="8" class="px-6 py-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                
+                                <div class="space-y-4">
+                                    <div>
+                                        <h4 class="text-xs font-bold uppercase text-gray-500 tracking-wider mb-2">Analysis</h4>
+                                        <div class="p-3 rounded-lg border 
+                                            {% if report.inspection_data.threat %}
+                                                bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200
+                                            {% elif not report.spf_aligned or not report.dkim_aligned %}
+                                                bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-200
+                                            {% else %}
+                                                bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-200
+                                            {% endif %}">
+                                            {{ report.inspection_data.layman_summary }}
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="p-3 bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                                            <div class="flex justify-between items-center mb-1">
+                                                <span class="text-xs font-bold text-gray-500">SPF Check</span>
+                                                <span class="text-xs font-mono px-1.5 rounded 
+                                                    {% if report.inspection_data.spf_tag.color == 'green' %}bg-green-100 text-green-800
+                                                    {% elif report.inspection_data.spf_tag.color == 'yellow' %}bg-yellow-100 text-yellow-800
+                                                    {% else %}bg-red-100 text-red-800{% endif %}">
+                                                    {{ report.inspection_data.spf_tag.status }}
+                                                </span>
+                                            </div>
+                                            <div class="text-xs text-gray-600 dark:text-gray-400 truncate" title="{{ report.inspection_data.spf_tag.detail }}">
+                                                {{ report.inspection_data.spf_tag.detail }}
+                                            </div>
+                                        </div>
+
+                                        <div class="p-3 bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                                            <div class="flex justify-between items-center mb-1">
+                                                <span class="text-xs font-bold text-gray-500">DKIM Check</span>
+                                                <span class="text-xs font-mono px-1.5 rounded 
+                                                    {% if report.inspection_data.dkim_tag.color == 'green' %}bg-green-100 text-green-800
+                                                    {% elif report.inspection_data.dkim_tag.color == 'yellow' %}bg-yellow-100 text-yellow-800
+                                                    {% else %}bg-red-100 text-red-800{% endif %}">
+                                                    {{ report.inspection_data.dkim_tag.status }}
+                                                </span>
+                                            </div>
+                                            <div class="text-xs text-gray-600 dark:text-gray-400 truncate" title="{{ report.inspection_data.dkim_tag.detail }}">
+                                                {{ report.inspection_data.dkim_tag.detail }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-4 text-xs">
+                                    <div>
+                                        <h4 class="text-xs font-bold uppercase text-gray-500 tracking-wider mb-2">Technical Headers</h4>
+                                        <dl class="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+                                            <div class="sm:col-span-1">
+                                                <dt class="text-gray-500">Envelope From (Return-Path)</dt>
+                                                <dd class="font-mono text-gray-900 dark:text-gray-200 break-all">{{ report.envelope_from|default:"-" }}</dd>
+                                            </div>
+                                            <div class="sm:col-span-1">
+                                                <dt class="text-gray-500">Header From</dt>
+                                                <dd class="font-mono text-gray-900 dark:text-gray-200">{{ report.header_from }}</dd>
+                                            </div>
+                                        </dl>
+                                    </div>
+                                    
+                                    <div>
+                                        <h4 class="text-xs font-bold uppercase text-gray-500 tracking-wider mb-2">Raw JSON</h4>
+                                        <pre class="bg-gray-100 dark:bg-gray-900 p-3 rounded overflow-x-auto text-[10px] leading-tight text-gray-600 dark:text-gray-400 font-mono border border-gray-200 dark:border-gray-700">{{ report.auth_results }}</pre>
+                                    </div>
+                                </div>
+
+                            </div>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                        <td colspan="8" class="px-6 py-8 text-center text-gray-500">
                             No reports found in this time period.
                         </td>
                     </tr>
@@ -86,4 +174,18 @@
         </div>
     </div>
 </div>
+
+<script>
+function toggleRow(id) {
+    const row = document.getElementById(id);
+    const icon = document.getElementById('icon-' + id);
+    if (row.classList.contains('hidden')) {
+        row.classList.remove('hidden');
+        icon.style.transform = 'rotate(180deg)';
+    } else {
+        row.classList.add('hidden');
+        icon.style.transform = 'rotate(0deg)';
+    }
+}
+</script>
 {% endblock %}

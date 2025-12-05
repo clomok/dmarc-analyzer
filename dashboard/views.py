@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Count
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models.functions import TruncDay, TruncWeek, TruncMonth
@@ -29,6 +29,13 @@ def dashboard(request):
         dmarc_pass_count=Sum('count', filter=Q(spf_aligned=True) | Q(dkim_aligned=True))
     )
     
+    # --- New Threat Calculation ---
+    # Count distinct Source IPs that failed BOTH SPF and DKIM
+    threat_ips = reports.filter(
+        spf_aligned=False, 
+        dkim_aligned=False
+    ).values('source_ip').distinct().count()
+
     total_volume = global_stats['total_volume'] or 0
     dmarc_pass = global_stats['dmarc_pass_count'] or 0
     pass_percentage = round((dmarc_pass / total_volume) * 100, 1) if total_volume > 0 else 0
@@ -94,6 +101,7 @@ def dashboard(request):
         'period': period,
         'granularity': granularity,
         'global_stats': global_stats,
+        'threat_ips': threat_ips, # <--- Added to context
         'pass_percentage': pass_percentage,
         'domain_stats': domain_stats,
         # JSON Dumps ensures correct JS syntax
