@@ -1,0 +1,152 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    
+    <div class="flex flex-col sm:flex-row justify-between items-center">
+        <h1 class="text-2xl font-bold">Dashboard</h1>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-1 inline-flex text-sm mt-4 sm:mt-0">
+            <a href="?period=7d" class="px-3 py-1.5 rounded-md {% if period == '7d' %}bg-primary text-white{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">7 Days</a>
+            <a href="?period=30d" class="px-3 py-1.5 rounded-md {% if period == '30d' %}bg-primary text-white{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">30 Days</a>
+            <a href="?period=90d" class="px-3 py-1.5 rounded-md {% if period == '90d' %}bg-primary text-white{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">90 Days</a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+            <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Emails</div>
+            <div class="mt-2 text-3xl font-bold">{{ global_stats.total_volume|default:"0" }}</div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+            <div class="text-sm font-medium text-gray-500 dark:text-gray-400">DMARC Compliance</div>
+            <div class="mt-2 text-3xl font-bold {% if pass_percentage >= 90 %}text-green-500{% elif pass_percentage >= 75 %}text-yellow-500{% else %}text-red-500{% endif %}">
+                {{ pass_percentage }}%
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+            <div class="text-sm font-medium text-gray-500 dark:text-gray-400">SPF Aligned</div>
+            <div class="mt-2 text-3xl font-bold">{{ global_stats.spf_aligned_count|default:"0" }}</div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+            <div class="text-sm font-medium text-gray-500 dark:text-gray-400">DKIM Aligned</div>
+            <div class="mt-2 text-3xl font-bold">{{ global_stats.dkim_aligned_count|default:"0" }}</div>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+        <h3 class="text-lg font-semibold mb-4">Volume History</h3>
+        <div id="volumeChart" style="height: 350px; width: 100%;"></div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold">Details by Domain</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700/50 uppercase text-gray-500 dark:text-gray-400 font-medium">
+                    <tr>
+                        <th class="px-6 py-4">Domain</th>
+                        <th class="px-6 py-4">Total</th>
+                        <th class="px-6 py-4">DMARC Pass</th>
+                        <th class="px-6 py-4">SPF Aligned</th>
+                        <th class="px-6 py-4">DKIM Aligned</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for row in domain_stats %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        <td class="px-6 py-4 font-medium">{{ row.domain_entity__domain_name }}</td>
+                        <td class="px-6 py-4">{{ row.total }}</td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                {{ row.dmarc_pass_count }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">{{ row.spf_pass_count }}</td>
+                        <td class="px-6 py-4">{{ row.dkim_pass_count }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">No data found for this period.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var chartDom = document.getElementById('volumeChart');
+        var myChart = echarts.init(chartDom);
+        var option;
+
+        const isDark = document.documentElement.classList.contains('dark');
+        const textColor = isDark ? '#9ca3af' : '#374151';
+
+        option = {
+            tooltip: {
+                trigger: 'axis'
+            },
+            legend: {
+                data: ['Passed', 'Failed'],
+                textStyle: { color: textColor }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: {{ chart_dates|safe }},
+                axisLabel: { color: textColor }
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: { color: textColor },
+                splitLine: {
+                    lineStyle: {
+                        color: isDark ? '#374151' : '#e5e7eb'
+                    }
+                }
+            },
+            series: [
+                {
+                    name: 'Passed',
+                    type: 'line',
+                    smooth: true,
+                    data: {{ chart_pass|safe }},
+                    itemStyle: { color: '#10b981' }, // Tailwind Green-500
+                    areaStyle: { opacity: 0.1 }
+                },
+                {
+                    name: 'Failed',
+                    type: 'line',
+                    smooth: true,
+                    data: {{ chart_fail|safe }},
+                    itemStyle: { color: '#ef4444' }, // Tailwind Red-500
+                    areaStyle: { opacity: 0.1 }
+                }
+            ]
+        };
+
+        myChart.setOption(option);
+
+        // Resize chart on window resize
+        window.addEventListener('resize', function() {
+            myChart.resize();
+        });
+    });
+</script>
+{% endblock %}
