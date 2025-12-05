@@ -1,0 +1,60 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# --- Django ---
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# --- Virtual Environments ---
+venv/
+.venv/
+env/
+.env/
+
+# --- Environment Variables & Secrets (CRITICAL) ---
+.env
+.env.local
+.env.production
+
+# --- Docker ---
+# Ignore local data if you ever map volumes to local folders
+postgres_data/
+redis_data/
+
+# --- VS Code ---
+.vscode/
+*.code-workspace
+
+# --- OS Generated ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Project Specific ---
+# If you download DMARC zips locally for testing and don't want them in git
+test_samples/
+archive/

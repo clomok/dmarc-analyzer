@@ -1,0 +1,9 @@
+django
+psycopg2-binary
+django-timescaledb
+parsedmarc
+djangorestframework
+django-allauth
+django-cors-headers
+
+# force
