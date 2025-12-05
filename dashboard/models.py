@@ -51,7 +51,8 @@ class DmarcReport(models.Model):
     envelope_from = models.TextField(null=True)
     dkim_domains = models.JSONField(default=list) 
     auth_results = models.JSONField() 
-
+    is_acknowledged = models.BooleanField(default=False, help_text="Has this threat been manually reviewed?")
+    
     class Meta:
         indexes = [
             models.Index(fields=['date_begin', 'domain_entity']),
