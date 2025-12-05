@@ -3,9 +3,11 @@
 {% block content %}
 <div class="space-y-6">
     
+    <!-- Header & Controls -->
     <div class="flex flex-col sm:flex-row justify-between items-center">
         <h1 class="text-2xl font-bold">Dashboard</h1>
         
+        <!-- Period Filter -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-1 inline-flex text-sm mt-4 sm:mt-0">
             <a href="?period=7d&granularity={{ granularity }}" class="px-3 py-1.5 rounded-md {% if period == '7d' %}bg-primary text-white{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">7 Days</a>
             <a href="?period=30d&granularity={{ granularity }}" class="px-3 py-1.5 rounded-md {% if period == '30d' %}bg-primary text-white{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">30 Days</a>
@@ -13,6 +15,7 @@
         </div>
     </div>
 
+    <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Emails</div>
@@ -34,10 +37,12 @@
         </div>
     </div>
 
+    <!-- Chart Section -->
     <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-lg font-semibold">Domain Traffic History</h3>
             
+            <!-- Granularity Toggle -->
             <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-1 inline-flex text-xs">
                 <a href="?period={{ period }}&granularity=day" class="px-3 py-1 rounded-md {% if granularity == 'day' %}bg-white dark:bg-gray-600 shadow-sm text-primary{% else %}text-gray-500 dark:text-gray-400 hover:text-gray-700{% endif %}">Day</a>
                 <a href="?period={{ period }}&granularity=week" class="px-3 py-1 rounded-md {% if granularity == 'week' %}bg-white dark:bg-gray-600 shadow-sm text-primary{% else %}text-gray-500 dark:text-gray-400 hover:text-gray-700{% endif %}">Week</a>
@@ -45,9 +50,11 @@
             </div>
         </div>
         
+        <!-- Chart Container -->
         <div id="volumeChart" style="height: 350px; width: 100%;"></div>
     </div>
 
+    <!-- Domain Table -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg font-semibold">Details by Domain</h3>
@@ -102,7 +109,7 @@
         const isDark = document.documentElement.classList.contains('dark');
         const textColor = isDark ? '#9ca3af' : '#374151';
 
-        // Data injected from Django
+        // Data injected from Django, now safe JSON strings
         const dates = {{ chart_dates|safe }};
         const seriesData = {{ chart_series|safe }};
 
@@ -118,7 +125,7 @@
             grid: {
                 left: '3%',
                 right: '4%',
-                bottom: '15%', // More space for legend
+                bottom: '15%', 
                 top: '3%',
                 containLabel: true
             },

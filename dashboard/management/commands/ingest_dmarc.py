@@ -24,7 +24,6 @@ class Command(BaseCommand):
         
         try:
             # 1. Initialize the Connection
-            # We establish the link to the server first
             connection = IMAPConnection(
                 host=settings.EMAIL_HOST_IMAP,
                 user=settings.EMAIL_HOST_USER,
@@ -32,8 +31,6 @@ class Command(BaseCommand):
             )
             
             # 2. Fetch & Parse Reports
-            # We pass the connection object, NOT the credentials, to this function.
-            # This function handles downloading, unzip, XML parsing, and batching.
             self.stdout.write("Fetching and parsing reports...")
             
             results = get_dmarc_reports_from_mailbox(
@@ -45,7 +42,6 @@ class Command(BaseCommand):
                 test=False
             )
             
-            # The results object contains keys for 'aggregate_reports' and 'forensic_reports'
             aggregate_reports = results.get("aggregate_reports", [])
             
         except Exception as e:
@@ -56,6 +52,7 @@ class Command(BaseCommand):
 
         # 3. Process Aggregate (RUA) Reports into Database
         count_created = 0
+        count_skipped = 0
         
         for report in aggregate_reports:
             # Extract header info
@@ -63,8 +60,14 @@ class Command(BaseCommand):
             policy_pub = report["policy_published"]
             domain_name = policy_pub["domain"]
             
+            # --- DEDUPLICATION CHECK ---
+            report_id = metadata.get("report_id")
+            if report_id and DmarcReport.objects.filter(report_id=report_id).exists():
+                self.stdout.write(f"Skipping duplicate report: {report_id}")
+                count_skipped += 1
+                continue
+
             # Find or Create the Domain Entity
-            # We assign it to a default Organization if it's new
             default_org, _ = Organization.objects.get_or_create(
                 name="Unassigned", 
                 defaults={"slug": "unassigned"}
@@ -77,44 +80,36 @@ class Command(BaseCommand):
 
             # Process every record (row) in the XML
             for record in report["records"]:
-                # Use .get() safely for top-level keys to prevent KeyErrors
                 source = record.get("source", {})
                 alignment = record.get("alignment", {})
                 auth_results = record.get("auth_results", {})
                 identifiers = record.get("identifiers", {})
                 
-                # Fix 1: Handle flat vs nested structure for count/policy
+                # Handle flat vs nested structure
                 if "row" in record and isinstance(record["row"], dict):
-                    # Some parsers nest these deeply
                     count = int(record["row"].get("count", 0))
                     policy_eval = record["row"].get("policy_evaluated", {})
                 else:
-                    # Others flatten them
                     count = int(record.get("count", 0))
                     policy_eval = record.get("policy_evaluated", {})
 
-                # Fix 2: Robust Date Handling
+                # Robust Date Handling
                 try:
-                    # Check for nested date_range dictionary
                     if "date_range" in metadata:
                         begin_ts = float(metadata["date_range"]["begin"])
                         end_ts = float(metadata["date_range"]["end"])
-                    # Fallback to flat keys if present
                     elif "begin_date" in metadata and "end_date" in metadata:
                          begin_raw = metadata["begin_date"]
                          end_raw = metadata["end_date"]
                          
-                         # If it's already a datetime object (some parsers do this)
                          if isinstance(begin_raw, datetime):
                              date_begin = make_aware(begin_raw)
                              date_end = make_aware(end_raw)
-                             # Skip the timestamp conversion logic
                              raise StopIteration 
 
                          begin_ts = float(begin_raw)
                          end_ts = float(end_raw)
                     else:
-                        # Last ditch effort: look for 'begin' key in metadata
                         begin_ts = float(metadata.get("begin", 0))
                         end_ts = float(metadata.get("end", 0))
 
@@ -122,13 +117,12 @@ class Command(BaseCommand):
                     date_end = make_aware(datetime.fromtimestamp(end_ts))
                 
                 except StopIteration:
-                    pass # Dates were already handled
+                    pass 
                 except (ValueError, TypeError):
-                    # Fallback for malformed dates
                     date_begin = make_aware(datetime.now())
                     date_end = make_aware(datetime.now())
 
-                # Extract DKIM domains safely
+                # Extract DKIM domains
                 dkim_domains = [
                     d["domain"] for d in auth_results.get("dkim", []) if "domain" in d
                 ]
@@ -136,6 +130,7 @@ class Command(BaseCommand):
                 # Create the Report Entry
                 DmarcReport.objects.create(
                     domain_entity=entity,
+                    report_id=report_id,  # Saving the ID now
                     date_begin=date_begin,
                     date_end=date_end,
                     source_ip=source.get("ip_address", "0.0.0.0"),
@@ -153,4 +148,4 @@ class Command(BaseCommand):
                 )
                 count_created += 1
         
-        self.stdout.write(self.style.SUCCESS(f"Done! Created {count_created} report rows."))
+        self.stdout.write(self.style.SUCCESS(f"Done! Created {count_created} rows. Skipped {count_skipped} duplicate reports."))

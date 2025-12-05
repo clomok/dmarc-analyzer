@@ -3,7 +3,7 @@ from django.db.models import Sum, Q
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models.functions import TruncDay, TruncWeek, TruncMonth
-import json  # <--- IMPORT ADDED
+import json
 
 from .models import DmarcReport, DomainEntity
 
@@ -53,7 +53,7 @@ def dashboard(request):
     elif granularity == 'month':
         trunc_func = TruncMonth
 
-    # A. Get Top 10 Domains
+    # A. Get Top 10 Domains (to avoid overcrowding the chart)
     top_domains = list(domain_stats[:10].values_list('domain_entity__domain_name', flat=True))
 
     # B. Aggregate data
@@ -68,7 +68,7 @@ def dashboard(request):
     ).order_by('date_group')
 
     # C. Pivot Data
-    # Convert dates to string immediately to avoid object issues
+    # Convert dates to string immediately
     unique_dates = sorted(list(set(item['date_group'].strftime('%Y-%m-%d') for item in chart_data_qs)))
     
     series_data = []
@@ -80,14 +80,13 @@ def dashboard(request):
                 (x for x in chart_data_qs if x['date_group'].strftime('%Y-%m-%d') == date and x['domain_entity__domain_name'] == domain), 
                 None
             )
-            # Ensure volume is an integer (handle potential None or Decimal types)
             vol = int(record['volume']) if record else 0
             domain_volumes.append(vol)
             
         series_data.append({
             'name': domain,
             'type': 'line',
-            'smooth': True, # Python True will be converted to JS true by json.dumps
+            'smooth': True,
             'data': domain_volumes
         })
 
@@ -97,7 +96,7 @@ def dashboard(request):
         'global_stats': global_stats,
         'pass_percentage': pass_percentage,
         'domain_stats': domain_stats,
-        # FIX: Dump as JSON strings
+        # JSON Dumps ensures correct JS syntax
         'chart_dates': json.dumps(unique_dates),
         'chart_series': json.dumps(series_data),
     }

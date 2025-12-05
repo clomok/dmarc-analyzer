@@ -26,6 +26,9 @@ class DmarcReport(models.Model):
     """
     domain_entity = models.ForeignKey(DomainEntity, on_delete=models.CASCADE)
     
+    # --- NEW FIELD FOR DEDUPLICATION ---
+    report_id = models.CharField(max_length=255, null=True, blank=True, db_index=True)
+
     # The Partitioning Column
     date_begin = models.DateTimeField()
     date_end = models.DateTimeField()
