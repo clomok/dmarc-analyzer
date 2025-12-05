@@ -7,7 +7,8 @@
         <h1 class="text-2xl font-bold">Dashboard</h1>
         
         <div class="flex items-center space-x-3">
-            <div id="ingest-result"></div> <button hx-post="{% url 'trigger_ingest' %}" 
+            <div id="ingest-result"></div> 
+            <button hx-post="{% url 'trigger_ingest' %}" 
                     hx-target="#ingest-result" 
                     hx-indicator="#spinner"
                     class="flex items-center space-x-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 transition">
@@ -39,11 +40,16 @@
             </div>
         </div>
         
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-             <div class="text-sm font-medium text-red-500 dark:text-red-400 uppercase tracking-wide">Active Threats</div>
-             <div class="mt-2 text-3xl font-bold text-red-600 dark:text-red-400">{{ threat_ips }}</div>
-             <div class="text-xs text-gray-400 mt-1">Unique IPs failing SPF & DKIM</div>
-        </div>
+        <a href="{% url 'active_threats' %}?period={{ period }}" class="block group">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 group-hover:border-red-400 transition cursor-pointer relative overflow-hidden">
+                <div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition text-red-500">
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                </div>
+                <div class="text-sm font-medium text-red-500 dark:text-red-400 uppercase tracking-wide">Active Threats</div>
+                <div class="mt-2 text-3xl font-bold text-red-600 dark:text-red-400">{{ threat_ips }}</div>
+                <div class="text-xs text-gray-400 mt-1">Unique IPs failing SPF & DKIM</div>
+            </div>
+        </a>
 
         <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Fully Aligned</div>
@@ -83,6 +89,7 @@
                 <thead class="bg-gray-50 dark:bg-gray-700/50 uppercase text-gray-500 dark:text-gray-400 font-medium">
                     <tr>
                         <th class="px-6 py-4">Domain</th>
+                        <th class="px-6 py-4">Last Seen</th>
                         <th class="px-6 py-4">Total</th>
                         <th class="px-6 py-4">DMARC Pass</th>
                         <th class="px-6 py-4">SPF Aligned</th>
@@ -92,10 +99,18 @@
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     {% for row in domain_stats %}
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                        <td class="px-6 py-4 font-medium">
+                        <td class="px-6 py-4 font-medium flex items-center">
                             <a href="{% url 'domain_detail' row.domain_entity__id %}" class="text-primary hover:underline">
                                 {{ row.domain_entity__domain_name }}
                             </a>
+                            {% if row.active_threat_count > 0 %}
+                                <span class="ml-2 text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded border border-red-200" title="{{ row.active_threat_count }} Active Threats">
+                                    !
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                            {{ row.last_seen|date:"M d, Y" }}
                         </td>
                         <td class="px-6 py-4">{{ row.total }}</td>
                         <td class="px-6 py-4">
@@ -108,7 +123,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">No data found for this period.</td>
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">No data found for this period.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

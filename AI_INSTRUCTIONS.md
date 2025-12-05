@@ -22,7 +22,7 @@
 
 - **Infrastructure:**
   - `docker-compose.yaml` handles `web` and `db`.
-  - **Security Fix:** CSRF tokens are now injected into `base.html` (`hx-headers`) to allow HTMX POST requests.
+  - **Security Fix:** CSRF tokens are injected into `base.html` (`hx-headers`) to allow HTMX POST requests.
 - **Database:**
   - `DmarcReport`: TimescaleDB Hypertable.
   - **Fields:** Added `report_id` (deduplication) and `is_acknowledged` (boolean for manual workflow).
@@ -31,15 +31,16 @@
   - Deduplication logic active (checks `report_id`).
   - **Manual Trigger:** "Check for Updates" button on Dashboard triggers `ingest_dmarc` via HTMX.
 - **Frontend (Dashboard):**
-  - **Stats Cards:** Added "Active Threats" card (Counts unacknowledged IPs failing SPF & DKIM).
+  - **Stats Cards:** "Active Threats" card now links to a dedicated drill-down view.
+  - **Domain Table:** - Added **"Last Seen"** column (Displays date of most recent report traffic).
+    - Added **Visual Indicators** (Red "!") next to domains with unacknowledged threats.
   - **Charts:** Multi-series line chart for domain volume.
+- **Frontend (Active Threats):**
+  - **New View:** `/threats/` consolidates all unacknowledged failures across all domains.
+  - **Functionality:** Reuses the accordion-style detail rows and "Mark as Reviewed" workflow.
 - **Frontend (Domain Detail):**
   - **Visuals:** Rows failing both SPF & DKIM are highlighted Red.
   - **Interaction:** **Accordion Style** expansion for rows.
-  - **Drill Down:** Clicking a row reveals:
-    - **Analysis:** Human-readable summary of _why_ it failed.
-    - **Tags:** Technical breakdown of SPF/DKIM results.
-    - **Raw Data:** Hidden JSON fields (`auth_results`, `envelope_from`) for debugging.
   - **Workflow:** "Mark as Reviewed" checkbox (HTMX) allows users to dismiss threats from the main dashboard counter.
 
 ## 3. Operational Commands (PowerShell)
@@ -61,12 +62,13 @@
 
 ## 5\. Next Steps / Roadmap
 
-1.  **Refinement:**
-    - Add "Last Seen" dates to the main Domain list.
-    - Polish mobile view for tables.
-2.  **Authentication:**
+1.  **Data Management (Next Priority):**
+    - **Historic Upload:** Add a feature to manually upload past DMARC XML/ZIP files to fill in historical data.
+2.  **Refinement:**
+    - Polish mobile view for tables (currently `overflow-x-auto`, considering stacked cards).
+3.  **Authentication:**
     - _Status: Low Priority / On Hold._ (Will likely use basic Django LoginView later).
-3.  **Automations (Future):**
+4.  **Automations (Future):**
     - Filters to auto-ignore known safe IPs.
 
 ## 6\. Constraints & Rules
