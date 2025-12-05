@@ -1,0 +1,20 @@
+# Force LF line endings for all text files
+
+# This ensures files work inside Docker (Linux) regardless of your host OS
+
+text=auto eol=lf
+
+# Explicitly force specific file types just in case
+
+*.sh text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+requirements.txt text eol=lf
+Dockerfile text eol=lf
+Makefile text eol=lf
+
+# PowerShell scripts SHOULD be CRLF (Windows native)
+manage.ps1 text eol=crlf  
