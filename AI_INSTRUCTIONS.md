@@ -1,62 +1,83 @@
+# AI_INSTRUCTIONS.md
+
 # Project: Self-Hosted DMARC Analyzer
 
 ## 1\. Context & Architecture
 
-**Goal:** A personal, self-hosted tool to receive, parse, store, and visualize DMARC reports from multiple domains. **Deployment:** Single-user (Admin), Multi-tenant data structure (Grouped by Domain/Organization). **Infrastructure:** Docker Compose (Local Homelab).
+Goal: A personal, self-hosted tool to receive, parse, store, and visualize DMARC reports from multiple domains.
+
+Deployment: Single-user (Admin), Multi-tenant data structure (Grouped by Domain/Organization).
+
+Infrastructure: Docker Compose (Local Homelab).
 
 ### The Stack
 
 - **Backend:** Django 5.x (Python 3.11)
 - **Database:** PostgreSQL 14 + **TimescaleDB** (for time-series report data)
 - **Ingress:** Custom Django Management Command using `parsedmarc` library (IMAP fetch).
-- **Frontend (Decision Made):** Django Templates + **HTMX** + **Tailwind CSS** (via CDN). _No React/Node build pipeline._
-- **Authentication:** `django-allauth` (Local DB auth for now, OIDC/Authentik planned for later).
+- **Frontend:** Django Templates + **HTMX** + **Tailwind CSS** (CDN) + **Apache ECharts**.
+- **Authentication:** `django-allauth` (Installed but not yet fully configured for UI).
 
 ## 2\. Current Status (As of Last Session)
 
-- **Infrastructure:** Docker containers (`web` and `db`) are healthy. `manage.ps1` script created for orchestration.
-- **Database:** \* Schema applied.
-  - `DmarcReport` table converted to a **TimescaleDB Hypertable**.
-  - Composite Primary Key `(id, date_begin)` applied to satisfy Timescale constraints.
-- **Ingress:** \* `ingest_dmarc.py` script is **COMPLETE and TESTED**.
-  - Successfully ingested 13 test records from the live mailbox.
-  - Logic handles `parsedmarc` v9.x API changes (using `IMAPConnection` class directly).
-  - Logic handles flat vs. nested XML structures for `count` and `policy_evaluated`.
-- **Frontend:** Not started. Currently standard Django 404 page.
+- **Infrastructure:**
+  - Docker Compose handles `web` and `db` services.
+  - Environment variables moved to `.env` file (gitignored).
+  - `docker-compose.yaml` uses `DATABASE_URL` injection.
+  - `settings.py` uses `dj-database-url` to parse db connections.
+- **Database:**
+  - `DmarcReport` table is a **TimescaleDB Hypertable**.
+  - **Schema Update:** Added `report_id` field to `DmarcReport` model to support deduplication.
+- **Ingress (**`ingest_dmarc.py`**):**
+  - Connects to IMAP via `parsedmarc`.
+  - **Deduplication:** Now checks `report_id` against the DB before inserting to prevent duplicate rows.
+  - Successfully parses XML, handles nested/flat structures, and robust date parsing.
+- **Frontend (Implemented):**
+  - **Base Template:** Includes Tailwind (Dark Mode default), HTMX, and ECharts.
+  - **Dashboard View:**
+    - Aggregate Stats Cards (Total, Compliance %, SPF/DKIM Alignment).
+    - **Multi-Series Line Chart:** Visualizes volume per domain over time.
+    - **Granularity Toggle:** Switch chart between Day/Week/Month.
+    - **Domain Table:** Lists domains with summary stats.
+  - **Domain Detail View:**
+    - Lists individual report rows for a specific domain.
+    - Shows Source IP, Country, Count, Disposition, and Alignment status.
 
 ## 3\. Operational Commands (PowerShell)
 
 - **Start Dev Server:** `.\manage.ps1 dev`
 - **Run Ingest (Fetch Emails):** `.\manage.ps1 ingest`
 - **Reset DB (Nuclear):** `.\manage.ps1 reset`
+- **Manual Migrations (if models change):**
+  ```
+  docker-compose exec web python manage.py makemigrations
+  docker-compose exec web python manage.py migrate
+  ```
 
 ## 4\. Database Schema Reference
 
-- **Organization:** Grouping entity for domains.
-- **DomainEntity:** Represents a domain (e.g., `google.com`). Settings for notification thresholds.
-- **DmarcReport:** The heavy lifter.
+- **Organization:** Grouping entity.
+- **DomainEntity:** Represents a domain (e.g., `google.com`).
+- **DmarcReport:**
   - **Type:** Hypertable (partitioned by `date_begin`).
+  - **Deduplication Key:** `report_id`.
   - **Key Data:** `source_ip`, `count`, `disposition`, `dkim_aligned`, `spf_aligned`.
-  - **JSONB Fields:** `auth_results`, `dkim_domains` (stores complex auth details).
+  - **JSONB Fields:** `auth_results`, `dkim_domains`.
 
-## 5\. Next Session Goals (Immediate Actions)
+## 5\. Next Session Goals
 
-We are moving from **Backend** to **Display**.
-
-1.  **Base Template:** Create `base.html` with:
-    - Tailwind CSS (CDN).
-    - HTMX (CDN).
-    - Dark Mode styles by default.
-2.  **Dashboard View (**`views.py`**):**
-    - Query `DmarcReport` to get aggregate stats (Pass vs. Fail counts).
-    - Group data by `DomainEntity`.
-3.  **Visualizations:**
-    - Integrate a lightweight charting library (e.g., Apache ECharts or ApexCharts) via `<script>` tag.
-    - Visualize the "Alignment" (SPF vs DKIM vs From Header).
-4.  **Drill Down:** Create a detail view for inspecting individual report rows.
+1.  **Row Expansion (Drill Down):**
+    - In the `Domain Detail` view, make table rows clickable.
+    - Reveal hidden JSON data: `auth_results` (why it failed), `envelope_from`, and `dkim_domains`.
+2.  **Authentication UI:**
+    - Create Login/Logout templates.
+    - Protect views with `@login_required`.
+3.  **Refinement:**
+    - Add "Last Seen" dates to the Domain list.
+    - specific highlighting for "Threats" (IPs that fail both SPF and DKIM).
 
 ## 6\. Critical Constraints & Rules
 
-- **DO NOT** suggest converting to React/Next.js. We are committed to the Django/HTMX path.
-- **DO NOT** use `parsedmarc.get_dmarc_reports_from_inbox` (it is deprecated/removed). Use the `ingest_dmarc.py` pattern we established.
-- **Always** check for Windows Line Ending (CRLF) issues when generating shell scripts or requirements files.
+- **JSON Serialization:** When passing data to ECharts in templates, ALWAYS use `json.dumps()` in the view and `{{ variable|safe }}` in the template to prevent JavaScript syntax errors.
+- **TimescaleDB:** Always ensure migrations respect the Hypertable structure (composite primary keys involving time).
+- **Environment:** maintain `.env` file usage for secrets; do not hardcode credentials in `docker-compose.yaml`.
