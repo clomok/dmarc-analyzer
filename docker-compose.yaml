@@ -1,13 +1,13 @@
-version: '3.8'
+---
 
 services:
   db:
     image: timescale/timescaledb:latest-pg14
     restart: always
     environment:
-      POSTGRES_DB: dmarc
-      POSTGRES_USER: dmarc_user
-      POSTGRES_PASSWORD: secure_password_here
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -23,10 +23,11 @@ services:
     depends_on:
       - db
     environment:
-      - DATABASE_URL=postgres://dmarc_user:secure_password_here@db:5432/dmarc
-      - EMAIL_HOST_USER=dmarc-logs@holdmysite.com
-      - EMAIL_HOST_PASSWORD=J8Lhg954ND3YitsN45yghf4
-      - EMAIL_HOST_IMAP=imap.holdmysite.com
+      # We construct the URL here using the same variables so they never drift
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+      - EMAIL_HOST_IMAP=${EMAIL_HOST_IMAP}
 
 volumes:
   postgres_data:

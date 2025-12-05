@@ -7,9 +7,9 @@
         <h1 class="text-2xl font-bold">Dashboard</h1>
         
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-1 inline-flex text-sm mt-4 sm:mt-0">
-            <a href="?period=7d" class="px-3 py-1.5 rounded-md {% if period == '7d' %}bg-primary text-white{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">7 Days</a>
-            <a href="?period=30d" class="px-3 py-1.5 rounded-md {% if period == '30d' %}bg-primary text-white{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">30 Days</a>
-            <a href="?period=90d" class="px-3 py-1.5 rounded-md {% if period == '90d' %}bg-primary text-white{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">90 Days</a>
+            <a href="?period=7d&granularity={{ granularity }}" class="px-3 py-1.5 rounded-md {% if period == '7d' %}bg-primary text-white{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">7 Days</a>
+            <a href="?period=30d&granularity={{ granularity }}" class="px-3 py-1.5 rounded-md {% if period == '30d' %}bg-primary text-white{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">30 Days</a>
+            <a href="?period=90d&granularity={{ granularity }}" class="px-3 py-1.5 rounded-md {% if period == '90d' %}bg-primary text-white{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">90 Days</a>
         </div>
     </div>
 
@@ -18,19 +18,16 @@
             <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Emails</div>
             <div class="mt-2 text-3xl font-bold">{{ global_stats.total_volume|default:"0" }}</div>
         </div>
-
         <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="text-sm font-medium text-gray-500 dark:text-gray-400">DMARC Compliance</div>
             <div class="mt-2 text-3xl font-bold {% if pass_percentage >= 90 %}text-green-500{% elif pass_percentage >= 75 %}text-yellow-500{% else %}text-red-500{% endif %}">
                 {{ pass_percentage }}%
             </div>
         </div>
-
         <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="text-sm font-medium text-gray-500 dark:text-gray-400">SPF Aligned</div>
             <div class="mt-2 text-3xl font-bold">{{ global_stats.spf_aligned_count|default:"0" }}</div>
         </div>
-
         <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <div class="text-sm font-medium text-gray-500 dark:text-gray-400">DKIM Aligned</div>
             <div class="mt-2 text-3xl font-bold">{{ global_stats.dkim_aligned_count|default:"0" }}</div>
@@ -38,7 +35,16 @@
     </div>
 
     <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-        <h3 class="text-lg font-semibold mb-4">Volume History</h3>
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-semibold">Domain Traffic History</h3>
+            
+            <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-1 inline-flex text-xs">
+                <a href="?period={{ period }}&granularity=day" class="px-3 py-1 rounded-md {% if granularity == 'day' %}bg-white dark:bg-gray-600 shadow-sm text-primary{% else %}text-gray-500 dark:text-gray-400 hover:text-gray-700{% endif %}">Day</a>
+                <a href="?period={{ period }}&granularity=week" class="px-3 py-1 rounded-md {% if granularity == 'week' %}bg-white dark:bg-gray-600 shadow-sm text-primary{% else %}text-gray-500 dark:text-gray-400 hover:text-gray-700{% endif %}">Week</a>
+                <a href="?period={{ period }}&granularity=month" class="px-3 py-1 rounded-md {% if granularity == 'month' %}bg-white dark:bg-gray-600 shadow-sm text-primary{% else %}text-gray-500 dark:text-gray-400 hover:text-gray-700{% endif %}">Month</a>
+            </div>
+        </div>
+        
         <div id="volumeChart" style="height: 350px; width: 100%;"></div>
     </div>
 
@@ -96,24 +102,30 @@
         const isDark = document.documentElement.classList.contains('dark');
         const textColor = isDark ? '#9ca3af' : '#374151';
 
+        // Data injected from Django
+        const dates = {{ chart_dates|safe }};
+        const seriesData = {{ chart_series|safe }};
+
         option = {
             tooltip: {
                 trigger: 'axis'
             },
             legend: {
-                data: ['Passed', 'Failed'],
-                textStyle: { color: textColor }
+                data: seriesData.map(s => s.name),
+                textStyle: { color: textColor },
+                bottom: 0 
             },
             grid: {
                 left: '3%',
                 right: '4%',
-                bottom: '3%',
+                bottom: '15%', // More space for legend
+                top: '3%',
                 containLabel: true
             },
             xAxis: {
                 type: 'category',
                 boundaryGap: false,
-                data: {{ chart_dates|safe }},
+                data: dates,
                 axisLabel: { color: textColor }
             },
             yAxis: {
@@ -125,29 +137,11 @@
                     }
                 }
             },
-            series: [
-                {
-                    name: 'Passed',
-                    type: 'line',
-                    smooth: true,
-                    data: {{ chart_pass|safe }},
-                    itemStyle: { color: '#10b981' }, // Tailwind Green-500
-                    areaStyle: { opacity: 0.1 }
-                },
-                {
-                    name: 'Failed',
-                    type: 'line',
-                    smooth: true,
-                    data: {{ chart_fail|safe }},
-                    itemStyle: { color: '#ef4444' }, // Tailwind Red-500
-                    areaStyle: { opacity: 0.1 }
-                }
-            ]
+            series: seriesData
         };
 
         myChart.setOption(option);
 
-        // Resize chart on window resize
         window.addEventListener('resize', function() {
             myChart.resize();
         });
