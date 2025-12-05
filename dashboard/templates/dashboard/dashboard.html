@@ -60,7 +60,11 @@
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     {% for row in domain_stats %}
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
-                        <td class="px-6 py-4 font-medium">{{ row.domain_entity__domain_name }}</td>
+                        <td class="px-6 py-4 font-medium">
+                            <a href="{% url 'domain_detail' row.domain_entity__id %}" class="text-primary hover:underline">
+                                {{ row.domain_entity__domain_name }}
+                            </a>
+                        </td>
                         <td class="px-6 py-4">{{ row.total }}</td>
                         <td class="px-6 py-4">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">

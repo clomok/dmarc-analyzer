@@ -1,0 +1,89 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <a href="{% url 'dashboard' %}" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                ← Back
+            </a>
+            <h1 class="text-2xl font-bold">{{ domain.domain_name }}</h1>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-1 inline-flex text-sm">
+            <a href="?period=7d" class="px-3 py-1.5 rounded-md {% if period == '7d' %}bg-primary text-white{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">7d</a>
+            <a href="?period=30d" class="px-3 py-1.5 rounded-md {% if period == '30d' %}bg-primary text-white{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">30d</a>
+            <a href="?period=90d" class="px-3 py-1.5 rounded-md {% if period == '90d' %}bg-primary text-white{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700{% endif %}">90d</a>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700/50 uppercase text-gray-500 dark:text-gray-400 font-medium">
+                    <tr>
+                        <th class="px-6 py-4">Date</th>
+                        <th class="px-6 py-4">Source IP</th>
+                        <th class="px-6 py-4">Hostname</th>
+                        <th class="px-6 py-4 text-center">Count</th>
+                        <th class="px-6 py-4">Disposition</th>
+                        <th class="px-6 py-4 text-center">SPF</th>
+                        <th class="px-6 py-4 text-center">DKIM</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for report in reports %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                        <td class="px-6 py-4 text-gray-500 dark:text-gray-400">
+                            {{ report.date_begin|date:"M d, H:i" }}
+                        </td>
+                        <td class="px-6 py-4 font-mono text-xs">
+                            {{ report.source_ip }}
+                            {% if report.country_code %}
+                            <span class="ml-1 text-gray-400">({{ report.country_code }})</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-xs truncate max-w-xs" title="{{ report.source_hostname }}">
+                            {{ report.source_hostname|default:"-" }}
+                        </td>
+                        <td class="px-6 py-4 text-center font-medium">
+                            {{ report.count }}
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if report.disposition == 'none' %}
+                                <span class="px-2 py-1 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">None</span>
+                            {% elif report.disposition == 'quarantine' %}
+                                <span class="px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Quarantine</span>
+                            {% else %}
+                                <span class="px-2 py-1 rounded text-xs bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Reject</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {% if report.spf_aligned %}
+                                <span class="text-green-500">✔</span>
+                            {% else %}
+                                <span class="text-red-500">✘</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {% if report.dkim_aligned %}
+                                <span class="text-green-500">✔</span>
+                            {% else %}
+                                <span class="text-red-500">✘</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                            No reports found in this time period.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
