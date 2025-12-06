@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 from django.conf import settings
 from dashboard.models import DomainEntity, DmarcReport, Organization
 from django.utils.timezone import make_aware
-# FIX: Added 'timezone' to the import below so timezone.utc works
+from django.utils.dateparse import parse_datetime
 from datetime import datetime, timezone
 import logging
 
@@ -12,6 +12,37 @@ from parsedmarc.mail import IMAPConnection
 from parsedmarc import get_dmarc_reports_from_mailbox
 
 logger = logging.getLogger(__name__)
+
+def parse_date(value):
+    """
+    Robustly parses a date value which might be a float timestamp, 
+    a string timestamp, a string datetime, or a datetime object.
+    """
+    if value is None:
+        return None
+    
+    # 1. If it's already a datetime object
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            return make_aware(value)
+        return value
+    
+    # 2. Try parsing as a timestamp (float/int/string)
+    try:
+        return datetime.fromtimestamp(float(value), tz=timezone.utc)
+    except (ValueError, TypeError):
+        pass
+
+    # 3. Try parsing as a standard datetime string (ISO or SQL-like)
+    if isinstance(value, str):
+        # Django's helper handles 'YYYY-MM-DD HH:MM:SS' and ISO formats
+        dt = parse_datetime(value)
+        if dt is not None:
+            if dt.tzinfo is None:
+                return make_aware(dt)
+            return dt
+            
+    return None
 
 class Command(BaseCommand):
     help = 'Fetches DMARC reports from IMAP and saves to DB'
@@ -94,35 +125,36 @@ class Command(BaseCommand):
                     count = int(record.get("count", 0))
                     policy_eval = record.get("policy_evaluated", {})
 
-                # Robust Date Handling
-                try:
-                    if "date_range" in metadata:
-                        begin_ts = float(metadata["date_range"]["begin"])
-                        end_ts = float(metadata["date_range"]["end"])
-                    elif "begin_date" in metadata and "end_date" in metadata:
-                         begin_raw = metadata["begin_date"]
-                         end_raw = metadata["end_date"]
-                         
-                         if isinstance(begin_raw, datetime):
-                             date_begin = make_aware(begin_raw)
-                             date_end = make_aware(end_raw)
-                             raise StopIteration 
-
-                         begin_ts = float(begin_raw)
-                         end_ts = float(end_raw)
-                    else:
-                        begin_ts = float(metadata.get("begin", 0))
-                        end_ts = float(metadata.get("end", 0))
-
-                    date_begin = datetime.fromtimestamp(begin_ts, tz=timezone.utc)
-                    date_end = datetime.fromtimestamp(end_ts, tz=timezone.utc)
+                # --- UPDATED DATE HANDLING ---
+                # Attempt to find dates in priority order
+                date_begin = None
+                date_end = None
                 
-                except StopIteration:
-                    pass 
-                except (ValueError, TypeError):
-                    # Fallback to current time (UTC)
+                # 1. Try standard 'date_range' (Most common)
+                if "date_range" in metadata:
+                    date_begin = parse_date(metadata["date_range"].get("begin"))
+                    date_end = parse_date(metadata["date_range"].get("end"))
+                
+                # 2. Try 'begin_date' / 'end_date' keys
+                if not date_begin and "begin_date" in metadata:
+                    date_begin = parse_date(metadata.get("begin_date"))
+                if not date_end and "end_date" in metadata:
+                    date_end = parse_date(metadata.get("end_date"))
+
+                # 3. Try flat 'begin' / 'end' keys
+                if not date_begin:
+                    date_begin = parse_date(metadata.get("begin"))
+                if not date_end:
+                    date_end = parse_date(metadata.get("end"))
+
+                # 4. Fallback: If all parsing failed, use Now
+                if not date_begin:
+                    self.stdout.write(self.style.WARNING(f"Could not parse date for report {report_id}. Using NOW."))
                     date_begin = datetime.now(timezone.utc)
+                if not date_end:
                     date_end = datetime.now(timezone.utc)
+                # -----------------------------
+
                 # Extract DKIM domains
                 dkim_domains = [
                     d["domain"] for d in auth_results.get("dkim", []) if "domain" in d
@@ -131,7 +163,7 @@ class Command(BaseCommand):
                 # Create the Report Entry
                 DmarcReport.objects.create(
                     domain_entity=entity,
-                    report_id=report_id,  # Saving the ID now
+                    report_id=report_id,
                     date_begin=date_begin,
                     date_end=date_end,
                     source_ip=source.get("ip_address", "0.0.0.0"),

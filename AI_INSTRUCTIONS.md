@@ -2,7 +2,7 @@
 
 # Project: Self-Hosted DMARC Analyzer
 
-## 1\. Context & Architecture
+## 1. Context & Architecture
 
 **Goal:** A personal, self-hosted tool to receive, parse, store, and visualize DMARC reports from multiple domains.
 
@@ -16,59 +16,51 @@
 - **Database:** PostgreSQL 14 + **TimescaleDB** (Hypertable for time-series data)
 - **Ingress:** Custom Django Management Command using `parsedmarc` (IMAP fetch).
 - **Frontend:** Django Templates + **HTMX** (Interactivity) + **Tailwind CSS** (CDN) + **Apache ECharts**.
-- **Authentication:** Postponed (Will rely on external Authentik proxy eventually).
+- **Authentication:** Relies on Django Superuser + Environment Variables.
 
-## 2\. Current Status
+## 2. Current Status
 
 - **Infrastructure:**
   - `docker-compose.yaml` handles `web` and `db`.
   - **Timezone:** Configured to `America/Los_Angeles`.
-  - **Security Fix:** CSRF tokens are injected into `base.html` (`hx-headers`) to allow HTMX POST requests.
+  - **Security:** - Secrets (`SECRET_KEY`, `DB_PASSWORD`, `EMAIL_PASSWORD`) are now loaded from `.env`.
+    - `DEBUG` mode is toggleable via `.env`.
+    - `ALLOWED_HOSTS` is configurable via `.env` (supports Reverse Proxy).
 - **Database:**
   - `DmarcReport`: TimescaleDB Hypertable.
   - **Fields:** Added `report_id` (deduplication) and `is_acknowledged` (boolean for manual workflow).
-  - **Logic:** `DmarcReport` model includes an `inspection_data` property that generates "Layman Summaries" and standardized "Threat Levels".
 - **Ingress:**
-  - **Logic:** Fixed UTC timestamp handling to prevent double-conversion errors.
+  - **Logic:** Robust date parsing added to handle both Timestamp (float) and String (ISO) date formats from various DMARC reporters.
   - **Manual Trigger:** "Check for Updates" button on Dashboard triggers `ingest_dmarc` via HTMX.
 - **Frontend (UI/UX):**
   - **Visuals:** Added **Country Flags** (via `flagcdn.com`) next to Source IPs.
-  - **Formatting:** Dates updated to **12-hour format** (e.g., "3:24 p.m.").
-  - **Dashboard:** Stats cards, multi-series line charts, and domain tables.
+  - **Formatting:** Dates updated to **12-hour format**.
   - **Active Threats:** Dedicated view (`/threats/`) for unacknowledged failures.
 
-## 3\. Operational Commands (PowerShell)
+## 3. Operational Commands (PowerShell)
 
 - **Start Dev Server:** `.\manage.ps1 dev`
 - **Run Ingest (Manual):** `.\manage.ps1 ingest` (Or use the GUI button)
 - **Reset DB:** `.\manage.ps1 reset`
-- **Migrations:**
-  ```powershell
-  docker-compose exec web python manage.py makemigrations
-  docker-compose exec web python manage.py migrate
-  ```
 
-## 4\. Development Philosophy (CRITICAL)
+## 4. Development Philosophy (CRITICAL)
 
-1.  **Simplicity First:** Always prioritize the simplest, most durable solution (e.g., standard Checkbox vs. dynamic state-swapping buttons).
-2.  **Consent for Complexity:** If a feature requires complex logic (e.g., websockets, celery tasks, heavy JS), **explain WHY** it is needed and get approval before generating code.
-3.  **Visual Clarity:** UI should cleanly separate "Technical Details" (for debugging) from "Layman Summaries" (for quick decision making).
+1.  **Simplicity First:** Always prioritize the simplest, most durable solution.
+2.  **Consent for Complexity:** Explain WHY before adding complex logic.
+3.  **Visual Clarity:** UI should cleanly separate "Technical Details" from "Layman Summaries".
 
-## 5\. Next Steps / Roadmap
+## 5. Next Steps / Roadmap
 
-1.  **Data Management (IMMEDIATE PRIORITY):**
-    - **Historic Upload:** Add a feature to manually upload past DMARC XML/ZIP files to fill in historical data.
-2.  **Refinement:**
-    - Polish mobile view for tables (currently `overflow-x-auto`, considering stacked cards).
-3.  **Authentication:**
-    - _Status: Low Priority / On Hold._ (Will likely use basic Django LoginView later).
-4.  **Automations (Future):**
-    - Filters to auto-ignore known safe IPs.
+1.  **Migration to Production:** - Deploy to `prod-dock1`.
+    - Configure `.env` with secure secrets.
+2.  **Data Management:**
+    - **Historic Upload:** Add a feature to manually upload past DMARC XML/ZIP files.
+3.  **Refinement:**
+    - Polish mobile view for tables.
 
-## 6\. Constraints & Rules
+## 6. Constraints & Rules
 
-- **Windows Compatibility:** Do NOT use Emoji flags (🇺🇸) for countries as Windows renders them as text letters (US). Use `flagcdn.com` images instead.
-- **JSON Serialization:** Use `json.dumps()` in views and `{{ variable|safe }}` in templates for ECharts.
-- **HTMX:** Always ensure `hx-headers` include the CSRF token for POST requests.
-- **TimescaleDB:** Migrations must respect the Hypertable structure (composite primary keys).
-- **Environment:** Keep secrets in `.env`; do not hardcode in `docker-compose.yaml`.
+- **Windows Compatibility:** Do NOT use Emoji flags (🇺🇸). Use `flagcdn.com`.
+- **JSON Serialization:** Use `json.dumps()` in views.
+- **HTMX:** Always ensure `hx-headers` include the CSRF token.
+- **Environment:** Keep secrets in `.env`; do not hardcode.
