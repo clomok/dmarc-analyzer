@@ -5,6 +5,7 @@ from datetime import timedelta
 from django.db.models.functions import TruncDay, TruncWeek, TruncMonth
 from django.core.management import call_command
 from django.http import HttpResponse
+from django.core.paginator import Paginator #
 import io
 import json
 
@@ -136,7 +137,23 @@ def domain_detail(request, domain_id):
     }
     return render(request, 'dashboard/domain_detail.html', context)
 
-# --- NEW VIEW FOR THREATS ---
+# --- NEW VIEW FOR ALL REPORTS ---
+def report_list(request):
+    """
+    Shows a paginated list of all reports, ordered by date (newest first).
+    """
+    report_list = DmarcReport.objects.select_related('domain_entity').all().order_by('-date_begin')
+    
+    paginator = Paginator(report_list, 50) # Show 50 reports per page
+    
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj
+    }
+    return render(request, 'dashboard/report_list.html', context)
+
 def active_threats(request):
     """
     Shows a consolidated list of ALL unacknowledged threats across ALL domains.

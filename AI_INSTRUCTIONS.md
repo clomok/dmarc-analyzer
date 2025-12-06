@@ -23,24 +23,24 @@
 - **Infrastructure:**
   - `docker-compose.yaml` handles `web` and `db`.
   - **Timezone:** Configured to `America/Los_Angeles`.
-  - **Security:** - Secrets (`SECRET_KEY`, `DB_PASSWORD`, `EMAIL_PASSWORD`) are now loaded from `.env`.
-    - `DEBUG` mode is toggleable via `.env`.
-    - `ALLOWED_HOSTS` is configurable via `.env` (supports Reverse Proxy).
+  - **Secrets:** Loaded from `.env`.
 - **Database:**
   - `DmarcReport`: TimescaleDB Hypertable.
-  - **Fields:** Added `report_id` (deduplication) and `is_acknowledged` (boolean for manual workflow).
-- **Ingress:**
-  - **Logic:** Robust date parsing added to handle both Timestamp (float) and String (ISO) date formats from various DMARC reporters.
-  - **Manual Trigger:** "Check for Updates" button on Dashboard triggers `ingest_dmarc` via HTMX.
+  - **Fields:** Includes `report_id` (deduplication) and `is_acknowledged` (workflow).
+- **Ingress Logic:**
+  - **Library:** Reverted to standard `parsedmarc.get_dmarc_reports_from_mailbox` for maximum stability with attachments (ZIP/XML).
+  - **Date Parsing:** Highly robust `parse_date` function added to handle Timestamp (float), String (ISO), and Datetime objects indiscriminately.
+  - **Ordering:** Ingestion relies on IMAP default order. **Operational Note:** To process newer emails faster, archive older processed emails in the mailbox.
 - **Frontend (UI/UX):**
-  - **Visuals:** Added **Country Flags** (via `flagcdn.com`) next to Source IPs.
-  - **Formatting:** Dates updated to **12-hour format**.
-  - **Active Threats:** Dedicated view (`/threats/`) for unacknowledged failures.
+  - **Dashboard:** "View All Reports" link added.
+  - **Pagination:** Implemented on the "All Reports" list (50 items per page).
+  - **Visuals:** Country Flags, 12-hour date formats, and "Active Threats" view.
 
 ## 3. Operational Commands (PowerShell)
 
 - **Start Dev Server:** `.\manage.ps1 dev`
-- **Run Ingest (Manual):** `.\manage.ps1 ingest` (Or use the GUI button)
+- **Run Ingest (Manual):** `.\manage.ps1 ingest` (Default limit: 10 emails)
+  - _Tip:_ Use `--limit 50` to process larger batches if the inbox is backed up.
 - **Reset DB:** `.\manage.ps1 reset`
 
 ## 4. Development Philosophy (CRITICAL)
@@ -51,10 +51,9 @@
 
 ## 5. Next Steps / Roadmap
 
-1.  **Migration to Production:** - Deploy to `prod-dock1`.
-    - Configure `.env` with secure secrets.
+1.  **Deployment:** Deploy current `report_list` and ingestion fixes to Production (`prod-dock1`).
 2.  **Data Management:**
-    - **Historic Upload:** Add a feature to manually upload past DMARC XML/ZIP files.
+    - **Historic Upload:** Add a feature to manually upload past DMARC XML/ZIP files via the browser.
 3.  **Refinement:**
     - Polish mobile view for tables.
 

@@ -1,0 +1,133 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+            <a href="{% url 'dashboard' %}" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                ← Back to Dashboard
+            </a>
+            <h1 class="text-2xl font-bold">All Reports</h1>
+        </div>
+        
+        <div class="text-sm text-gray-500">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700/50 uppercase text-gray-500 dark:text-gray-400 font-medium">
+                    <tr>
+                        <th class="px-6 py-4">Date</th>
+                        <th class="px-6 py-4">Domain</th>
+                        <th class="px-6 py-4">Source IP</th>
+                        <th class="px-6 py-4 text-center">Count</th>
+                        <th class="px-6 py-4 text-center">SPF</th>
+                        <th class="px-6 py-4 text-center">DKIM</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for report in page_obj %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition
+                        {% if not report.spf_aligned or not report.dkim_aligned %}
+                            {% if report.is_acknowledged %}bg-gray-50 dark:bg-gray-800/50{% else %}bg-yellow-50 dark:bg-yellow-900/10{% endif %}
+                        {% endif %}
+                    ">
+                        <td class="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                            {{ report.date_begin|date:"M d, Y h:i A" }}
+                        </td>
+                        <td class="px-6 py-4 font-medium">
+                            {{ report.domain_entity.domain_name }}
+                        </td>
+                        <td class="px-6 py-4 font-mono text-xs">
+                            <div class="flex items-center">
+                                <span>{{ report.source_ip }}</span>
+                                {% if report.country_code %}
+                                    <span class="ml-1 text-gray-400">({{ report.country_code }})</span>
+                                    <img src="https://flagcdn.com/20x15/{{ report.country_code|lower }}.png" 
+                                        width="20" height="15" alt="{{ report.country_code }}" 
+                                        class="ml-2 shadow-sm rounded-sm">
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-center font-medium">
+                            {{ report.count }}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {% if report.spf_aligned %}
+                                <span class="text-green-500 font-bold">✔</span>
+                            {% else %}
+                                <span class="text-red-500 font-bold">✘</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {% if report.dkim_aligned %}
+                                <span class="text-green-500 font-bold">✔</span>
+                            {% else %}
+                                <span class="text-red-500 font-bold">✘</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                            No reports found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if page_obj.has_other_pages %}
+        <div class="bg-gray-50 dark:bg-gray-700/50 px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div class="flex-1 flex justify-between sm:hidden">
+                {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Previous</a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Next</a>
+                {% endif %}
+            </div>
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm text-gray-700 dark:text-gray-300">
+                        Showing
+                        <span class="font-medium">{{ page_obj.start_index }}</span>
+                        to
+                        <span class="font-medium">{{ page_obj.end_index }}</span>
+                        of
+                        <span class="font-medium">{{ page_obj.paginator.count }}</span>
+                        results
+                    </p>
+                </div>
+                <div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <span class="sr-only">Previous</span>
+                                ←
+                            </a>
+                        {% endif %}
+                        
+                        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-200">
+                            Page {{ page_obj.number }}
+                        </span>
+
+                        {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <span class="sr-only">Next</span>
+                                →
+                            </a>
+                        {% endif %}
+                    </nav>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

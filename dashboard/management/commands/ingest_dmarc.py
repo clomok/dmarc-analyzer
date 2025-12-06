@@ -1,11 +1,10 @@
-import parsedmarc
+import logging
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from dashboard.models import DomainEntity, DmarcReport, Organization
 from django.utils.timezone import make_aware
 from django.utils.dateparse import parse_datetime
 from datetime import datetime, timezone
-import logging
 
 # Import the connection class and the high-level processor
 from parsedmarc.mail import IMAPConnection
@@ -95,7 +94,8 @@ class Command(BaseCommand):
             # --- DEDUPLICATION CHECK ---
             report_id = metadata.get("report_id")
             if report_id and DmarcReport.objects.filter(report_id=report_id).exists():
-                self.stdout.write(f"Skipping duplicate report: {report_id}")
+                # Quietly skip duplicates to keep logs clean, or uncomment below to see them
+                # self.stdout.write(f"Skipping duplicate report: {report_id}")
                 count_skipped += 1
                 continue
 
@@ -149,7 +149,7 @@ class Command(BaseCommand):
 
                 # 4. Fallback: If all parsing failed, use Now
                 if not date_begin:
-                    self.stdout.write(self.style.WARNING(f"Could not parse date for report {report_id}. Using NOW."))
+                    # self.stdout.write(self.style.WARNING(f"Could not parse date for report {report_id}. Using NOW."))
                     date_begin = datetime.now(timezone.utc)
                 if not date_end:
                     date_end = datetime.now(timezone.utc)
