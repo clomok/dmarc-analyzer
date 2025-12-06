@@ -53,6 +53,17 @@ class DmarcReport(models.Model):
     auth_results = models.JSONField() 
     is_acknowledged = models.BooleanField(default=False, help_text="Has this threat been manually reviewed?")
     
+    # --- NEW PROPERTY FOR FLAGS ---
+    @property
+    def country_flag(self):
+        """
+        Converts a 2-letter country code (e.g. 'US') into a flag emoji (🇺🇸).
+        """
+        if not self.country_code or len(self.country_code) != 2:
+            return ""
+        # Magic offset to convert ASCII letters to Regional Indicator Symbols
+        return "".join([chr(ord(c.upper()) + 127397) for c in self.country_code])
+
     class Meta:
         indexes = [
             models.Index(fields=['date_begin', 'domain_entity']),

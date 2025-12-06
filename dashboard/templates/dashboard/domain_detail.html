@@ -44,13 +44,23 @@
                         {% endif %}
                     ">
                         <td class="px-6 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                            {{ report.date_begin|date:"M d, H:i" }}
+                            {{ report.date_begin|date:"M d, h:i A" }}
                         </td>
                         <td class="px-6 py-4 font-mono text-xs">
-                            {{ report.source_ip }}
-                            {% if report.country_code %}
-                            <span class="ml-1 text-gray-400">({{ report.country_code }})</span>
-                            {% endif %}
+                            <div class="flex items-center">
+                                <span>{{ report.source_ip }}</span>
+                                
+                                {% if report.country_code %}
+                                    <span class="ml-1 text-gray-400">({{ report.country_code }})</span>
+                                    
+                                    <img src="https://flagcdn.com/20x15/{{ report.country_code|lower }}.png" 
+                                        width="20" 
+                                        height="15" 
+                                        alt="{{ report.country_code }}" 
+                                        class="ml-2 shadow-sm rounded-sm"
+                                        title="{{ report.country_code }}">
+                                {% endif %}
+                            </div>
                         </td>
                         <td class="px-6 py-4 text-xs truncate max-w-xs" title="{{ report.source_hostname }}">
                             {{ report.source_hostname|default:"-" }}

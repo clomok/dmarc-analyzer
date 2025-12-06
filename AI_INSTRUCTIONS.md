@@ -2,7 +2,7 @@
 
 # Project: Self-Hosted DMARC Analyzer
 
-## 1. Context & Architecture
+## 1\. Context & Architecture
 
 **Goal:** A personal, self-hosted tool to receive, parse, store, and visualize DMARC reports from multiple domains.
 
@@ -18,32 +18,26 @@
 - **Frontend:** Django Templates + **HTMX** (Interactivity) + **Tailwind CSS** (CDN) + **Apache ECharts**.
 - **Authentication:** Postponed (Will rely on external Authentik proxy eventually).
 
-## 2. Current Status
+## 2\. Current Status
 
 - **Infrastructure:**
   - `docker-compose.yaml` handles `web` and `db`.
+  - **Timezone:** Configured to `America/Los_Angeles`.
   - **Security Fix:** CSRF tokens are injected into `base.html` (`hx-headers`) to allow HTMX POST requests.
 - **Database:**
   - `DmarcReport`: TimescaleDB Hypertable.
   - **Fields:** Added `report_id` (deduplication) and `is_acknowledged` (boolean for manual workflow).
-  - **Logic:** `DmarcReport` model includes an `inspection_data` property that generates "Layman Summaries" and standardized "Threat Levels" (Red/Yellow/Green) on the fly.
+  - **Logic:** `DmarcReport` model includes an `inspection_data` property that generates "Layman Summaries" and standardized "Threat Levels".
 - **Ingress:**
-  - Deduplication logic active (checks `report_id`).
+  - **Logic:** Fixed UTC timestamp handling to prevent double-conversion errors.
   - **Manual Trigger:** "Check for Updates" button on Dashboard triggers `ingest_dmarc` via HTMX.
-- **Frontend (Dashboard):**
-  - **Stats Cards:** "Active Threats" card now links to a dedicated drill-down view.
-  - **Domain Table:** - Added **"Last Seen"** column (Displays date of most recent report traffic).
-    - Added **Visual Indicators** (Red "!") next to domains with unacknowledged threats.
-  - **Charts:** Multi-series line chart for domain volume.
-- **Frontend (Active Threats):**
-  - **New View:** `/threats/` consolidates all unacknowledged failures across all domains.
-  - **Functionality:** Reuses the accordion-style detail rows and "Mark as Reviewed" workflow.
-- **Frontend (Domain Detail):**
-  - **Visuals:** Rows failing both SPF & DKIM are highlighted Red.
-  - **Interaction:** **Accordion Style** expansion for rows.
-  - **Workflow:** "Mark as Reviewed" checkbox (HTMX) allows users to dismiss threats from the main dashboard counter.
+- **Frontend (UI/UX):**
+  - **Visuals:** Added **Country Flags** (via `flagcdn.com`) next to Source IPs.
+  - **Formatting:** Dates updated to **12-hour format** (e.g., "3:24 p.m.").
+  - **Dashboard:** Stats cards, multi-series line charts, and domain tables.
+  - **Active Threats:** Dedicated view (`/threats/`) for unacknowledged failures.
 
-## 3. Operational Commands (PowerShell)
+## 3\. Operational Commands (PowerShell)
 
 - **Start Dev Server:** `.\manage.ps1 dev`
 - **Run Ingest (Manual):** `.\manage.ps1 ingest` (Or use the GUI button)
@@ -62,7 +56,7 @@
 
 ## 5\. Next Steps / Roadmap
 
-1.  **Data Management (Next Priority):**
+1.  **Data Management (IMMEDIATE PRIORITY):**
     - **Historic Upload:** Add a feature to manually upload past DMARC XML/ZIP files to fill in historical data.
 2.  **Refinement:**
     - Polish mobile view for tables (currently `overflow-x-auto`, considering stacked cards).
@@ -73,6 +67,7 @@
 
 ## 6\. Constraints & Rules
 
+- **Windows Compatibility:** Do NOT use Emoji flags (🇺🇸) for countries as Windows renders them as text letters (US). Use `flagcdn.com` images instead.
 - **JSON Serialization:** Use `json.dumps()` in views and `{{ variable|safe }}` in templates for ECharts.
 - **HTMX:** Always ensure `hx-headers` include the CSRF token for POST requests.
 - **TimescaleDB:** Migrations must respect the Hypertable structure (composite primary keys).
