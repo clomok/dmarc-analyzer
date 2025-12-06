@@ -3,7 +3,8 @@ from django.core.management.base import BaseCommand
 from django.conf import settings
 from dashboard.models import DomainEntity, DmarcReport, Organization
 from django.utils.timezone import make_aware
-from datetime import datetime
+# FIX: Added 'timezone' to the import below so timezone.utc works
+from datetime import datetime, timezone
 import logging
 
 # Import the connection class and the high-level processor
