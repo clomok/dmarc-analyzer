@@ -1,40 +1,34 @@
 # AI_INSTRUCTIONS.md
 
-# Project: Self-Hosted DMARC Analyzer
+# Project: Self-Hosted DMARC Analyzer (MSP Platform)
 
 ## 1. Context & Architecture
 
-**Goal:** A personal, self-hosted tool to receive, parse, store, and visualize DMARC reports from multiple domains.
+**Goal:** A "White-Glove" Managed Service Platform (MSP) for an expert administrator to manage email security for multiple clients (100% managed service).
 
-**Deployment:** Single-user (Admin), Multi-tenant data structure (Grouped by Domain/Organization).
+**Deployment:** Single Super-Admin (You), Multi-tenant data structure (Grouped by Organization -> Domain). Clients do NOT log in.
 
-**Infrastructure:** Docker Compose (Local Homelab).
+**Infrastructure:** Docker Compose (Local Homelab -> Prod Server).
 
 ### The Stack
 
 - **Backend:** Django 5.x (Python 3.11)
 - **Database:** PostgreSQL 14 + **TimescaleDB** (Hypertable for time-series data)
-- **Ingress:** Custom Django Management Command using `parsedmarc` (IMAP fetch).
-- **Frontend:** Django Templates + **HTMX** (Interactivity) + **Tailwind CSS** (CDN) + **Apache ECharts**.
-- **Authentication:** Relies on Django Superuser + Environment Variables.
+- **Ingress:** Custom Django Management Command using `parsedmarc`.
+- **Frontend:** Django Templates + **HTMX** (Interactivity) + **Tailwind CSS**.
+- **Reporting:** PDF/HTML generation for client billing justification.
 
 ## 2. Current Status
 
 - **Infrastructure:**
   - `docker-compose.yaml` handles `web` and `db`.
-  - **Timezone:** Configured to `America/Los_Angeles`.
-  - **Secrets:** Loaded from `.env`.
+  - **Security:** `CSRF_TRUSTED_ORIGINS` and `SECURE_PROXY_SSL_HEADER` configured for Reverse Proxy (SSL) support.
 - **Database:**
   - `DmarcReport`: TimescaleDB Hypertable.
-  - **Fields:** Includes `report_id` (deduplication) and `is_acknowledged` (workflow).
+  - `DomainEntity`: Linked to `Organization`.
 - **Ingress Logic:**
-  - **Library:** Reverted to standard `parsedmarc.get_dmarc_reports_from_mailbox` for maximum stability with attachments (ZIP/XML).
-  - **Date Parsing:** Highly robust `parse_date` function added to handle Timestamp (float), String (ISO), and Datetime objects indiscriminately.
-- **Frontend (UI/UX):**
-  - **Dashboard:** "View All Reports" link added.
-  - **Pagination:** Implemented on the "All Reports" list (50 items per page).
-  - **Visuals:** Country Flags, 12-hour date formats, and "Active Threats" view.
-  - **Fixes:** Added SSL/Proxy support for CSRF and HTMX interactions.
+  - Robust date parsing and deduplication (`report_id`).
+  - "Active Threats" view implemented.
 
 ## 3. Workflow & Operations
 
@@ -46,27 +40,43 @@
 
 **Operational Commands:**
 
-- **Start Dev Server:** `.\manage.ps1 dev` (Windows) / `make dev` (Linux/Mac)
-- **Run Ingest (Manual):** `.\manage.ps1 ingest` (Windows) / `make ingest` (Linux/Mac)
-- **Reset DB:** `.\manage.ps1 reset` (Windows) / `make reset` (Linux/Mac)
+- **Start Dev Server:** `.\manage.ps1 dev`
+- **Run Ingest (Manual):** `.\manage.ps1 ingest`
+- **Reset DB:** `.\manage.ps1 reset`
 
-## 4. Development Philosophy (CRITICAL)
+## 4. Development Philosophy
 
-1.  **Simplicity First:** Always prioritize the simplest, most durable solution.
-2.  **Consent for Complexity:** Explain WHY before adding complex logic.
-3.  **Visual Clarity:** UI should cleanly separate "Technical Details" from "Layman Summaries".
+1.  **Efficiency for the Expert:** Prioritize global dashboards and "at-a-glance" status over friendly wizards.
+2.  **Value Demonstration:** Reporting features must clearly demonstrate "Work Done" (Threats blocked, volume processed) to justify the monthly service fee.
+3.  **Simplicity First:** Avoid complex microservices; keep logic within Django/Postgres.
 
-## 5. Next Steps / Roadmap
+## 5. Roadmap
 
-1.  **Deployment:** Verify SSL/Proxy settings on Production (`prod-dock1`).
-2.  **Data Management:**
-    - **Historic Upload:** Add a feature to manually upload past DMARC XML/ZIP files via the browser.
-3.  **Refinement:**
-    - Polish mobile view for tables.
+### Phase 1: MSP Core (The "Sanity" Features)
+
+1.  **Source Classification:**
+    - Create a lookup system to map `source_hostname` (e.g., `*google.com`) to Vendor Names ("Google Workspace").
+    - Group reporting by Vendor instead of IP.
+2.  **Global MSP Dashboard:**
+    - A "Super-Admin" view listing ALL domains.
+    - Columns: Domain | Policy | Compliance % | SPF Lookup Count | Active Threat Count.
+    - Sorting: Worst performing domains first.
+
+### Phase 2: Client Value (The "Product")
+
+3.  **Executive Reporting:**
+    - Generate a monthly PDF/HTML summary for specific Organizations.
+    - Metrics: Total Volume, Auth Rate, Threats Prevented, Geographic Breakdown.
+4.  **SPF Monitoring:**
+    - **Automated:** Daily background check of all managed domains to count SPF lookups. Alert if >10.
+    - **Sales Tool:** A manual input form to scan a prospect's domain and reveal their SPF lookup count.
+
+### Phase 3: Deployment & Refinement
+
+5.  **Historic Upload:** Manual upload of past XML/ZIP files via browser.
+6.  **Mobile Polish:** Better table rendering on small screens.
 
 ## 6. Constraints & Rules
 
 - **Windows Compatibility:** Do NOT use Emoji flags (🇺🇸). Use `flagcdn.com`.
-- **JSON Serialization:** Use `json.dumps()` in views.
-- **HTMX:** Always ensure `hx-headers` include the CSRF token.
-- **Environment:** Keep secrets in `.env`; do not hardcode.
+- **Security:** Use Environment Variables for all secrets.
