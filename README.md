@@ -6,7 +6,11 @@
 
 **DMARC Analyzer** is a private, self-hosted security tool designed to ingest, parse, and visualize DMARC aggregate reports (RUA).
 
+I have been implementing domain level email security for years but have never had an easy way to check it to see if anything was wrong, I would just rely on someone letting me know there was an issue. I finally built this tool for my internal use and for an easier way to keep an eye on the events happenind to my domains' emails.
+
 Unlike commercial SaaS solutions that require you to ship sensitive email traffic data to third parties, this tool keeps your data entirely within your own infrastructure. It provides immediate actionable intelligence on email spoofing attempts, SPF/DKIM misalignments, and unauthorized IPs sending mail on your behalf.
+
+I needed the tool, so I built it. You can use it.
 
 ### Key Features
 
@@ -22,6 +26,8 @@ Before installing, ensure you have the following installed on your system:
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Compose)
 - [Git](https://git-scm.com/)
+
+You obviously need to have your email domains setup for DMARC in order to take advantage of this. [I can help you with that](https://sd-tech-solutions.com/)
 
 ## Installation
 
@@ -68,7 +74,7 @@ Choose the instructions for your operating system.
 
 #### 🪟 Windows (PowerShell)
 
-We provide a helper script `manage.ps1` for easy management on Windows.
+The helper script `manage.ps1` is provided for easy management on Windows.
 
 **Start the Application:**
 
@@ -91,7 +97,7 @@ docker-compose down
 
 #### 🍎 Mac & 🐧 Linux (Bash)
 
-We provide a `Makefile` for standard Unix environments.
+A `Makefile` is provided for standard Unix environments.
 
 **Start the Application:**
 
