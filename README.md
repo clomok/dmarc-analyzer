@@ -27,7 +27,8 @@ Before installing, ensure you have the following installed on your system:
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Compose)
 - [Git](https://git-scm.com/)
 
-You obviously need to have your email domains setup for DMARC in order to take advantage of this. [I can help you with that](https://sd-tech-solutions.com/)
+You obviously need to have your email domains setup for DMARC in order to take advantage of this.
+[I can help you with that](https://sd-tech-solutions.com/)
 
 ## Installation
 
