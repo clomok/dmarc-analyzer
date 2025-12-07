@@ -62,21 +62,44 @@
     - Columns: Domain | Policy | Compliance % | SPF Lookup Count | Active Threat Count.
     - Sorting: Worst performing domains first.
 
-### Phase 2: Client Value (The "Product")
+### Phase 2: The "Security Analyst" Engine (Intelligence Upgrade)
 
-3.  **Executive Reporting:**
+**Goal:** Automate the distinction between "Real Hackers" and "Friendly Fire" (Misconfigurations/Forwarders).
+
+1.  **Infrastructure Enrichment:**
+    - Add `geoip2` to requirements.
+    - Download `GeoLite2-ASN.mmdb` to a local `/geoip/` folder.
+2.  **Database Expansion:**
+    - Update `DmarcReport` model with `source_asn` (int) and `source_org` (char) fields.
+3.  **Ingestion Upgrade:**
+    - Modify `ingest_dmarc` to resolve IP -> ASN/Org immediately upon creation.
+4.  **"Friendly Fire" Logic (The Analyst Engine):**
+    - Implement a `threat_analysis` property in the Model.
+    - **Logic:**
+      - **Green/Safe:** Known Good ASN (History of passing DMARC for this domain).
+      - **Blue/Forwarder:** Header From != Envelope From AND Hostname contains "relay/fwd".
+      - **Yellow/Unauthorized:** Valid Corporate ASN (Google/Microsoft) but failing SPF.
+      - **Red/Threat:** Residential/Dynamic IP or Unknown ASN.
+5.  **UI Implementation:**
+    - **Badges:** Show Provider Name (e.g., "Google LLC", "Stackmail") next to IPs in reports.
+    - **Active Threats Split:** Separate the view into "Urgent Security Threats" (Red) vs "Misconfigurations" (Yellow/Blue).
+
+### Phase 3: Client Value (The "Product")
+
+1.  **Executive Reporting:**
     - Generate a monthly PDF/HTML summary for specific Organizations.
     - Metrics: Total Volume, Auth Rate, Threats Prevented, Geographic Breakdown.
-4.  **SPF Monitoring:**
+2.  **SPF Monitoring:**
     - **Automated:** Daily background check of all managed domains to count SPF lookups. Alert if >10.
     - **Sales Tool:** A manual input form to scan a prospect's domain and reveal their SPF lookup count.
 
-### Phase 3: Deployment & Refinement
+### Phase 4: Deployment & Refinement
 
-5.  **Historic Upload:** Manual upload of past XML/ZIP files via browser.
-6.  **Mobile Polish:** Better table rendering on small screens.
+1.  **Historic Upload:** Manual upload of past XML/ZIP files via browser.
+2.  **Mobile Polish:** Better table rendering on small screens.
 
 ## 6. Constraints & Rules
 
 - **Windows Compatibility:** Do NOT use Emoji flags (🇺🇸). Use `flagcdn.com`.
 - **Security:** Use Environment Variables for all secrets.
+- **Performance:** Avoid external API calls during page loads; stick to local DB/MMDB lookups.
