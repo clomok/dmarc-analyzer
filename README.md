@@ -32,7 +32,7 @@ This application builds its own Docker images locally to ensure you have full co
 Open your terminal or command prompt and run:
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/clomok/dmarc-analyzer
 cd dmarc-analyzer
 ```
 
@@ -42,9 +42,7 @@ Create a `.env` file in the root directory. You can copy the example below:
 
 **File:** `.env`
 
-Ini, TOML
-
-```
+```Ini, TOML
 # Database (TimescaleDB)
 POSTGRES_DB=dmarc
 POSTGRES_USER=dmarc_user
@@ -54,12 +52,12 @@ POSTGRES_PASSWORD=secure_password_here
 SECRET_KEY=generate_a_long_random_string_here
 DEBUG=False
 ALLOWED_HOSTS=yourdomain.com,localhost,127.0.0.1
-CSRF_TRUSTED_ORIGINS=[https://yourdomain.com](https://yourdomain.com)
+CSRF_TRUSTED_ORIGINS=https://dmarc.yourdomain.com
 
 # Email Ingestion (IMAP)
-EMAIL_HOST_IMAP=imap.gmail.com
+EMAIL_HOST_IMAP=imap.email.com
 EMAIL_HOST_USER=reports@yourdomain.com
-EMAIL_HOST_PASSWORD=your_app_password
+EMAIL_HOST_PASSWORD=your_email_inbox_password
 ```
 
 ---
@@ -74,25 +72,20 @@ We provide a helper script `manage.ps1` for easy management on Windows.
 
 **Start the Application:**
 
-PowerShell
-
-```
+```powershell
 .\manage.ps1 dev
 ```
 
 **Run Manual Ingestion:**
+Use the `--limit 5` flag to ingest more or less than the default 10 per run
 
-PowerShell
-
-```
-.\manage.ps1 ingest
+```powershell
+.\manage.ps1 ingest --limit 5
 ```
 
 **Stop the Application:**
 
-PowerShell
-
-```
+```powershell
 docker-compose down
 ```
 
@@ -102,25 +95,19 @@ We provide a `Makefile` for standard Unix environments.
 
 **Start the Application:**
 
-Bash
-
-```
+```bash
 make dev
 ```
 
 **Run Manual Ingestion:**
 
-Bash
-
-```
+```bash
 make ingest
 ```
 
 **Stop the Application:**
 
-Bash
-
-```
+```bash
 docker-compose down
 ```
 
