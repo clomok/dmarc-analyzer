@@ -30,18 +30,25 @@
 - **Ingress Logic:**
   - **Library:** Reverted to standard `parsedmarc.get_dmarc_reports_from_mailbox` for maximum stability with attachments (ZIP/XML).
   - **Date Parsing:** Highly robust `parse_date` function added to handle Timestamp (float), String (ISO), and Datetime objects indiscriminately.
-  - **Ordering:** Ingestion relies on IMAP default order. **Operational Note:** To process newer emails faster, archive older processed emails in the mailbox.
 - **Frontend (UI/UX):**
   - **Dashboard:** "View All Reports" link added.
   - **Pagination:** Implemented on the "All Reports" list (50 items per page).
   - **Visuals:** Country Flags, 12-hour date formats, and "Active Threats" view.
+  - **Fixes:** Added SSL/Proxy support for CSRF and HTMX interactions.
 
-## 3. Operational Commands (PowerShell)
+## 3. Workflow & Operations
 
-- **Start Dev Server:** `.\manage.ps1 dev`
-- **Run Ingest (Manual):** `.\manage.ps1 ingest` (Default limit: 10 emails)
-  - _Tip:_ Use `--limit 50` to process larger batches if the inbox is backed up.
-- **Reset DB:** `.\manage.ps1 reset`
+**Development Cycle:**
+
+1.  **Develop:** Write code on Windows (Localhost) using `manage.ps1`.
+2.  **Push:** Commit changes to GitHub.
+3.  **Deploy:** Pull changes on server (`prod-dock1`) and restart container.
+
+**Operational Commands:**
+
+- **Start Dev Server:** `.\manage.ps1 dev` (Windows) / `make dev` (Linux/Mac)
+- **Run Ingest (Manual):** `.\manage.ps1 ingest` (Windows) / `make ingest` (Linux/Mac)
+- **Reset DB:** `.\manage.ps1 reset` (Windows) / `make reset` (Linux/Mac)
 
 ## 4. Development Philosophy (CRITICAL)
 
@@ -51,7 +58,7 @@
 
 ## 5. Next Steps / Roadmap
 
-1.  **Deployment:** Deploy current `report_list` and ingestion fixes to Production (`prod-dock1`).
+1.  **Deployment:** Verify SSL/Proxy settings on Production (`prod-dock1`).
 2.  **Data Management:**
     - **Historic Upload:** Add a feature to manually upload past DMARC XML/ZIP files via the browser.
 3.  **Refinement:**

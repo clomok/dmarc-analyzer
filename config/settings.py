@@ -21,6 +21,17 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 # Allow specific hosts in production (comma separated)
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
+# --- PROXY & SECURITY SETTINGS (FIX FOR SSL/REVERSE PROXY) ---
+# This is critical for HTMX buttons to work behind Nginx/Traefik
+# 1. Trust the 'X-Forwarded-Proto' header so Django knows we are on HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# 2. Allow CSRF verification to succeed from the trusted domain
+# Must be a comma-separated list like 'https://dmarc.example.com,https://monitor.example.com'
+if os.environ.get('CSRF_TRUSTED_ORIGINS'):
+    CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS').split(',')
+# -------------------------------------------------------------
+
 
 # Application definition
 
